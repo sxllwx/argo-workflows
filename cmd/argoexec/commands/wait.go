@@ -63,8 +63,8 @@ func waitContainer(ctx context.Context) error {
 				}
 			}
 		}()
-		signal.Stop(ch)
-		log.Printf("signal chan stopped")
+		//signal.Stop(ch)
+		log.Printf("signal chan not be stopped")
 	}()
 	// Capture output script result
 	err := wfExecutor.CaptureScriptResult(ctx)
