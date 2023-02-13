@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -16,6 +17,8 @@ func NewWaitCommand() *cobra.Command {
 		Use:   "wait",
 		Short: "wait for main container to finish and save artifacts",
 		Run: func(cmd *cobra.Command, args []string) {
+			log.SetReportCaller(true)
+			log.SetLevel(log.DebugLevel)
 			ctx := context.Background()
 			err := waitContainer(ctx)
 			if err != nil {
@@ -34,15 +37,34 @@ func waitContainer(ctx context.Context) error {
 
 	// use a function to constrain the scope of ctx
 	func() {
-		// this allows us to gracefully shutdown, capturing artifacts
-		ctx, cancel := signal.NotifyContext(ctx, syscall.SIGTERM)
-		defer cancel()
+
+		ch := make(chan os.Signal, 1)
+		signal.Notify(ch, syscall.SIGTERM)
 
 		// Wait for main container to complete
 		err := wfExecutor.Wait(ctx)
 		if err != nil {
 			wfExecutor.AddError(err)
 		}
+
+		sig, ok := <-ch
+		log.Printf("got signal: %s, chan status %v", sig, ok)
+		if !ok {
+			return
+		}
+		go func() {
+			for {
+				select {
+				case sig, ok := <-ch:
+					log.Printf("got signal: %s, chan status %v", sig, ok)
+					if !ok {
+						return
+					}
+				}
+			}
+		}()
+		signal.Stop(ch)
+		log.Printf("signal chan stopped")
 	}()
 	// Capture output script result
 	err := wfExecutor.CaptureScriptResult(ctx)
