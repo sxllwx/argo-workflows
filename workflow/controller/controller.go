@@ -159,7 +159,7 @@ func init() {
 }
 
 // NewWorkflowController instantiates a new WorkflowController
-func NewWorkflowController(ctx context.Context, restConfig *rest.Config, kubeclientset kubernetes.Interface, wfclientset wfclientset.Interface, namespace, managedNamespace, executorImage, executorImagePullPolicy, executorLogFormat, configMap string, executorPlugins bool) (*WorkflowController, error) {
+func NewWorkflowController(ctx context.Context, restConfig *rest.Config, kubeclientset kubernetes.Interface, wfclientset wfclientset.Interface, namespace, managedNamespace, executorImage, executorImagePullPolicy, executorLogFormat, configMap string, executorPlugins bool, insecureRegistries []string) (*WorkflowController, error) {
 	dynamicInterface, err := dynamic.NewForConfig(restConfig)
 	if err != nil {
 		return nil, err
@@ -190,7 +190,7 @@ func NewWorkflowController(ctx context.Context, restConfig *rest.Config, kubecli
 	wfc.UpdateConfig(ctx)
 
 	wfc.metrics = metrics.New(wfc.getMetricsServerConfig())
-	wfc.entrypoint = entrypoint.New(kubeclientset, wfc.Config.Images)
+	wfc.entrypoint = entrypoint.New(kubeclientset, wfc.Config.Images, insecureRegistries)
 
 	workqueue.SetProvider(wfc.metrics) // must execute SetProvider before we created the queues
 	wfc.wfQueue = wfc.metrics.RateLimiterWithBusyWorkers(&fixedItemIntervalRateLimiter{}, "workflow_queue")

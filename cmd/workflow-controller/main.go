@@ -62,6 +62,7 @@ func NewRootCommand() *cobra.Command {
 		namespaced              bool   // --namespaced
 		managedNamespace        string // --managed-namespace
 		executorPlugins         bool
+		registryInsecure        []string
 	)
 
 	command := cobra.Command{
@@ -109,7 +110,7 @@ func NewRootCommand() *cobra.Command {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			wfController, err := controller.NewWorkflowController(ctx, config, kubeclientset, wfclientset, namespace, managedNamespace, executorImage, executorImagePullPolicy, logFormat, configMap, executorPlugins)
+			wfController, err := controller.NewWorkflowController(ctx, config, kubeclientset, wfclientset, namespace, managedNamespace, executorImage, executorImagePullPolicy, logFormat, configMap, executorPlugins, registryInsecure)
 			errors.CheckError(err)
 
 			leaderElectionOff := os.Getenv("LEADER_ELECTION_DISABLE")
@@ -179,6 +180,7 @@ func NewRootCommand() *cobra.Command {
 	command.Flags().BoolVar(&namespaced, "namespaced", false, "run workflow-controller as namespaced mode")
 	command.Flags().StringVar(&managedNamespace, "managed-namespace", "", "namespace that workflow-controller watches, default to the installation namespace")
 	command.Flags().BoolVar(&executorPlugins, "executor-plugins", false, "enable executor plugins")
+	command.Flags().StringArrayVar(&registryInsecure, "registry-insecure", []string{}, "The workflow pod container registry is insecure")
 
 	viper.AutomaticEnv()
 	viper.SetEnvPrefix("ARGO")

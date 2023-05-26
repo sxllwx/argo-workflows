@@ -2,6 +2,8 @@ package entrypoint
 
 import (
 	"context"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"net/http"
 
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
@@ -18,6 +20,7 @@ type Options struct {
 	Namespace          string
 	ServiceAccountName string
 	ImagePullSecrets   []apiv1.LocalObjectReference
+	Transport          http.RoundTripper
 }
 
 type Image struct {
@@ -25,12 +28,15 @@ type Image struct {
 	Cmd        []string
 }
 
-func New(kubernetesClient kubernetes.Interface, config map[string]config.Image) Interface {
+func New(kubernetesClient kubernetes.Interface, config map[string]config.Image, insecureRegistries []string) Interface {
 	return &cacheIndex{
 		lru.New(1024),
 		chainIndex{
 			configIndex(config),
-			&containerRegistryIndex{kubernetesClient},
+			&containerRegistryIndex{
+				kubernetesClient:   kubernetesClient,
+				insecureRegistries: sets.NewString(insecureRegistries...),
+			},
 		},
 	}
 }
